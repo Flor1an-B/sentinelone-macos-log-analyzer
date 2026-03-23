@@ -65,6 +65,16 @@ def run_update(current_version: str) -> None:
     with console.status("[bold cyan]Connecting to GitHub…[/bold cyan]", spinner="dots"):
         try:
             latest = _fetch_latest_version()
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404:
+                console.print(
+                    "\n[yellow]⚠[/yellow]  No releases published yet on GitHub. "
+                    "Check back later or visit:\n"
+                    f"  [dim cyan]{_GITHUB}/releases[/dim cyan]\n"
+                )
+            else:
+                console.print(f"\n[red]✗[/red]  GitHub API error {exc.code}: {exc.reason}\n")
+            sys.exit(1)
         except urllib.error.URLError as exc:
             console.print(f"\n[red]✗[/red]  Could not reach GitHub: {exc.reason}\n")
             sys.exit(1)
