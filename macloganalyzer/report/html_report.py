@@ -4,7 +4,7 @@ import html
 import json
 import re
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from macloganalyzer.models.context import SystemContext
@@ -1252,9 +1252,10 @@ _JS = r"""
     setTimeout(() => { riskBar.style.width = target + '%'; }, 300);
   }
 
-  // ── SVG Area Chart ──────────────────────────────────────────────────────────
-  const areaChartEl = document.getElementById('events-area-chart');
-  if (areaChartEl && DATA && DATA.monthly_counts) {
+  // ── SVG Area Chart — rendered server-side in Python (see _render_area_chart_svg)
+  // JS rendering removed: getElementById only found one of 4 period-view copies,
+  // and entries.length >= 2 caused blank charts for single-month dumps.
+  if (false && DATA && DATA.monthly_counts) {
     const entries = Object.entries(DATA.monthly_counts).sort((a,b) => a[0].localeCompare(b[0]));
     if (entries.length >= 2) {
       const W = 700, H = 160, padL = 44, padR = 16, padT = 10, padB = 28;
@@ -1557,9 +1558,9 @@ _JS = r"""
     });
   }
 
-  // ── Activity heatmap ────────────────────────────────────────────────────────
-  const heatmapEl = document.getElementById('activity-heatmap');
-  if (heatmapEl && DATA && DATA.mr_daily_counts) {
+  // ── Activity heatmap — rendered server-side in Python (see _render_heatmap_html)
+  // JS rendering removed: getElementById only found the first period-view copy.
+  if (false && DATA && DATA.mr_daily_counts) {
     const counts = DATA.mr_daily_counts;
     const dates  = Object.keys(counts).sort();
     if (dates.length > 0) {
@@ -3462,6 +3463,180 @@ def _ioc_section(findings: list[Finding], mr_events: list[Event]) -> str:
     )
 
 
+def _render_area_chart_svg(month_counts: dict[str, int], uid: str = "") -> str:
+    """Render the Event Timeline SVG area chart entirely in Python.
+
+    Works for any number of months ≥ 1, avoiding the JS getElementById / >= 2
+    bugs that caused blank charts when all events fall in a single month.
+    ``uid`` is appended to the gradient id to avoid SVG id collisions across
+    the four period-view copies that coexist in the DOM.
+    """
+    if not month_counts:
+        return ""
+    entries = sorted(month_counts.items())   # [(YYYY-MM, count), ...]
+    W, H   = 700, 160
+    padL, padR, padT, padB = 44, 16, 10, 28
+    max_v  = max(v for _, v in entries) or 1
+    gid    = f"ag{uid}"                      # unique gradient id per period
+
+    grid_vals = [0, round(max_v * 0.25), round(max_v * 0.5), round(max_v * 0.75), max_v]
+
+    def sx(i: int) -> float:
+        if len(entries) == 1:
+            return (W + padL - padR) / 2     # centre the single point
+        return padL + i * (W - padL - padR) / (len(entries) - 1)
+
+    def sy(v: int) -> float:
+        return padT + (H - padT - padB) * (1 - v / max_v)
+
+    pts = [(sx(i), sy(v)) for i, (_, v) in enumerate(entries)]
+
+    # SVG defs — gradient
+    svgc = (
+        f'<defs>'
+        f'<linearGradient id="{gid}" x1="0" y1="0" x2="0" y2="1">'
+        f'<stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.25"/>'
+        f'<stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/>'
+        f'</linearGradient>'
+        f'</defs>'
+    )
+
+    # Grid lines + Y-axis labels
+    for v in grid_vals:
+        y = sy(v)
+        svgc += (
+            f'<line class="area-chart-grid-line"'
+            f' x1="{padL}" y1="{y:.1f}" x2="{W - padR}" y2="{y:.1f}"/>'
+            f'<text class="area-chart-axis"'
+            f' x="{padL - 4}" y="{y + 3:.1f}" text-anchor="end">{v}</text>'
+        )
+
+    if len(entries) == 1:
+        # Single month — render as a centred bar instead of an area line
+        x, y  = pts[0]
+        month, count = entries[0]
+        bar_h = H - padB - y
+        svgc += (
+            f'<rect x="{x - 20:.1f}" y="{y:.1f}" width="40" height="{bar_h:.1f}"'
+            f' fill="url(#{gid})" stroke="#0ea5e9" stroke-width="1.5" rx="3"/>'
+            f'<text class="area-chart-axis" x="{x:.1f}" y="{H - padB + 14}"'
+            f' text-anchor="middle">{_esc(month)}</text>'
+            f'<circle class="area-chart-dot" cx="{x:.1f}" cy="{y:.1f}" r="4"'
+            f' data-tip="{_esc(month)}: {count} events"/>'
+        )
+        return svgc
+
+    # Multi-month — area fill + line + dots
+    line_d = " ".join(
+        f"{'M' if i == 0 else 'L'}{x:.1f},{y:.1f}" for i, (x, y) in enumerate(pts)
+    )
+    area_d = (
+        f"{line_d}"
+        f" L{pts[-1][0]:.1f},{H - padB}"
+        f" L{pts[0][0]:.1f},{H - padB} Z"
+    )
+
+    # X-axis labels (max 8 labels to avoid overlap)
+    step = max(1, (len(entries) + 7) // 8)
+    for i, (month, _) in enumerate(entries):
+        if i % step == 0 or i == len(entries) - 1:
+            svgc += (
+                f'<text class="area-chart-axis"'
+                f' x="{sx(i):.1f}" y="{H - padB + 14}" text-anchor="middle">'
+                f'{_esc(month)}</text>'
+            )
+
+    svgc += (
+        f'<path class="area-chart-area" fill="url(#{gid})" d="{_esc(area_d)}"/>'
+        f'<path class="area-chart-line" d="{_esc(line_d)}"/>'
+    )
+    for (month, count), (x, y) in zip(entries, pts):
+        svgc += (
+            f'<circle class="area-chart-dot" cx="{x:.1f}" cy="{y:.1f}" r="4"'
+            f' data-tip="{_esc(month)}: {count} events"/>'
+        )
+    return svgc
+
+
+def _render_heatmap_html(daily_counts: dict[str, int]) -> str:
+    """Render the Daily Detection Activity heatmap grid entirely in Python.
+
+    Replaces the JS getElementById approach that only rendered the heatmap for
+    the first period-view in the DOM, leaving all others blank.
+    """
+    if not daily_counts:
+        return ""
+    dates = sorted(daily_counts.keys())
+    if not dates:
+        return ""
+
+    max_val = max(daily_counts.values()) or 1
+
+    def hm_level(v: int) -> int:
+        if not v:
+            return 0
+        r = v / max_val
+        if r < 0.25: return 1
+        if r < 0.50: return 2
+        if r < 0.75: return 3
+        return 4
+
+    first = date.fromisoformat(dates[0])
+    last  = date.fromisoformat(dates[-1])
+
+    # Sunday of the week containing first date (Python weekday: Mon=0, Sun=6)
+    days_to_sunday = (first.weekday() + 1) % 7
+    start_day = first - timedelta(days=days_to_sunday)
+
+    # Saturday of the week containing last date
+    days_to_saturday = (5 - last.weekday()) % 7
+    end_day = last + timedelta(days=days_to_saturday)
+
+    # Build week columns (start = Sunday of each week)
+    weeks: list[date] = []
+    cur = start_day
+    while cur <= end_day:
+        weeks.append(cur)
+        cur += timedelta(weeks=1)
+
+    # Month labels: track which column a new month starts in
+    prev_month = -1
+    month_labels: list[tuple[int, str]] = []   # (col_idx, abbrev)
+    for col_idx, week_start in enumerate(weeks):
+        if week_start.month != prev_month:
+            month_labels.append((col_idx, week_start.strftime("%b")))
+            prev_month = week_start.month
+
+    total_cols = len(weeks)
+    ml_html = ""
+    for i, (col, label) in enumerate(month_labels):
+        span = (month_labels[i + 1][0] if i + 1 < len(month_labels) else total_cols) - col
+        ml_html += (
+            f'<span class="heatmap-month-label"'
+            f' style="width:{span * 19}px;display:inline-block">{_esc(label)}</span>'
+        )
+
+    # Grid cells (7 rows = Sun…Sat per column)
+    grid_html = ""
+    for week_start in weeks:
+        grid_html += '<div class="heatmap-col">'
+        for row in range(7):
+            day = week_start + timedelta(days=row)
+            ds  = day.isoformat()
+            v   = daily_counts.get(ds, 0)
+            lvl = hm_level(v)
+            tip = f"{ds}: {v} event{'s' if v != 1 else ''}" if v else ds
+            grid_html += f'<div class="heatmap-cell hm-{lvl}" data-tip="{_esc(tip)}"></div>'
+        grid_html += '</div>'
+
+    return (
+        f'<div class="heatmap-wrap">'
+        f'<div style="display:flex;gap:3px;margin-bottom:4px">{ml_html}</div>'
+        f'<div class="heatmap-grid">{grid_html}</div>'
+        f'</div>'
+    )
+
+
 def _timeline_section(mr_events: list[Event]) -> str:
     if not mr_events:
         return (
@@ -3520,6 +3695,7 @@ def _stats_section(
     ctx: SystemContext,
     findings: list[Finding],
     mr_events: list[Event],
+    period_uid: str = "",
 ) -> str:
     stats = ctx.parse_stats
     stat_items = [
@@ -3614,9 +3790,10 @@ def _stats_section(
         f'</div></div>'
     )
 
-    # ── Activity heatmap ─────────────────────────────────────────────────────
+    # ── Activity heatmap (rendered in Python — avoids JS getElementById collision) ──
     heatmap_section = ""
-    if ctx.mr_daily_counts:
+    heatmap_html = _render_heatmap_html(ctx.mr_daily_counts)
+    if heatmap_html:
         heatmap_section = (
             f'<div class="card" style="margin-bottom:20px"><div class="card-body">'
             f'<div class="stat-card-title" data-tip="Each cell is one calendar day. '
@@ -3624,7 +3801,7 @@ def _stats_section(
             f'Daily Detection Activity</div>'
             f'<p style="font-size:11px;color:var(--text3);margin:4px 0 8px">Darker cells = more events detected. '
             f'Hover a cell for date and count.</p>'
-            f'<div id="activity-heatmap"></div>'
+            f'{heatmap_html}'
             f'</div></div>'
         )
 
@@ -3693,9 +3870,10 @@ def _stats_section(
             f'</div></div>'
         )
 
-    # ── SVG area chart placeholder ────────────────────────────────────────────
+    # ── SVG area chart (rendered in Python — avoids JS getElementById collision) ──
     area_chart_html = ""
-    if month_counts:
+    svg_content = _render_area_chart_svg(month_counts, uid=period_uid)
+    if svg_content:
         area_chart_html = (
             f'<div class="card" style="margin-bottom:20px"><div class="card-body">'
             f'<div class="stat-card-title">Event Timeline — Monthly Distribution</div>'
@@ -3703,7 +3881,8 @@ def _stats_section(
             f'Behavioral events extracted from match_reports, grouped by calendar month. '
             f'Spikes may indicate a campaign or incident window.</p>'
             f'<div class="area-chart-outer">'
-            f'<svg id="events-area-chart" class="area-chart-svg" viewBox="0 0 700 160" preserveAspectRatio="xMinYMin meet">'
+            f'<svg class="area-chart-svg" viewBox="0 0 700 160" preserveAspectRatio="xMinYMin meet">'
+            f'{svg_content}'
             f'</svg>'
             f'</div>'
             f'</div></div>'
@@ -5545,7 +5724,7 @@ def generate_html(
         }),
         # ── Period-sensitive: Statistics ───────────────────────────────────────
         _pwrap("s-stats", {
-            d: _no_section_id(_stats_section(_pdata[d]["ctx"], _pdata[d]["f"], _pdata[d]["e"]))
+            d: _no_section_id(_stats_section(_pdata[d]["ctx"], _pdata[d]["f"], _pdata[d]["e"], period_uid=str(d)))
             for d in _PERIOD_DAYS
         }),
         # ── Static: Threat Intel + Blind Spots ────────────────────────────────

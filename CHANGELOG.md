@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1] — 2026-03-23
+
+### Fixed
+- **Statistics — Event Timeline chart blank** — two root causes: (1) JS condition `entries.length >= 2` prevented rendering when all events fell in a single calendar month; (2) `_stats_section` is rendered once per period (4 copies in DOM) each with `id="events-area-chart"` / `id="activity-heatmap"` — `getElementById` only found the first, leaving the visible period empty. Both charts now rendered entirely in Python (`_render_area_chart_svg`, `_render_heatmap_html`) with unique SVG gradient IDs per period — no JS dependency, no ID collisions
+
+---
+
 ## [1.2.0] — 2026-03-23
 
 ### Added
