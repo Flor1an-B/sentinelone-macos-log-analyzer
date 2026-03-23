@@ -3,7 +3,9 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.2.0-informational)]()
-[![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple)](https://www.apple.com/macos/)
+[![Platform](https://img.shields.io/badge/runs%20on-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?logo=python&logoColor=white)]()
+[![Analyzes](https://img.shields.io/badge/analyzes-macOS%20SentinelOne%20dumps-blue?logo=apple)]()
+
 
 > **Offline forensic analysis tool for SentinelOne diagnostic log dumps on macOS.**
 > Parses a dump directory, applies 33 detection rules mapped to MITRE ATT&CK, and generates interactive HTML, Markdown, and JSON reports — no console access required.
