@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "sentinelone-macos-log-analyzer"
+version = "1.1.0"
+description = "Forensic analysis tool for SentinelOne log dumps on macOS"
+authors = [{ name = "Florian Bertaux" }]
+requires-python = ">=3.11"
+dependencies = [
+    "biplist>=1.0.3",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
+
+[project.scripts]
+macloganalyzer = "macloganalyzer.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["macloganalyzer*"]

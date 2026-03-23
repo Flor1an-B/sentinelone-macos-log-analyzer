@@ -1,0 +1,11 @@
+# Normalize line endings to LF on commit
+* text=auto eol=lf
+
+# Explicitly declare text files
+*.py text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.plist text eol=lf
+*.gitignore text eol=lf
