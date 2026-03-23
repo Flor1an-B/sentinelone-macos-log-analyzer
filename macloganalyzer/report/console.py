@@ -26,7 +26,7 @@ if sys.platform == "win32":
 
 # ── Application identity ───────────────────────────────────────────────────────
 APP_NAME    = "SentinelOne macOS Log Analyzer"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 APP_AUTHOR  = "Florian Bertaux"
 
 console = Console(highlight=False)

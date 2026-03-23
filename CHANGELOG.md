@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0] — 2026-03-23
+
+### Added
+- **Self-updater** — `macloganalyzer --update` checks the latest GitHub release, computes git blob SHA1 checksums to identify changed files, and downloads only the diff. Each file is integrity-verified before being written to disk. Features a styled banner (name, author, GitHub URL, current version), a change table (added / modified / removed), a confirmation prompt, and a per-file progress bar.
+
+---
+
 ## [1.1.0] — 2026-03-23
 
 ### Fixed

@@ -2,7 +2,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.1.0-informational)]()
+[![Version](https://img.shields.io/badge/version-1.2.0-informational)]()
 [![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple)](https://www.apple.com/macos/)
 
 > **Offline forensic analysis tool for SentinelOne diagnostic log dumps on macOS.**

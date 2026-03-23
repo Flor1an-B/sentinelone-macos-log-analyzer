@@ -16,6 +16,7 @@ from macloganalyzer.report.console import (
     print_summary, print_banner, make_progress,
     APP_VERSION, APP_AUTHOR,
 )
+from macloganalyzer.update import run_update
 
 console = Console()
 
@@ -34,7 +35,13 @@ def main() -> None:
     )
     parser.add_argument(
         "dump_path",
+        nargs="?",
         help="Path to the SentinelOne dump directory",
+    )
+    parser.add_argument(
+        "--update",
+        action="store_true",
+        help="Check for updates and download changed files from GitHub",
     )
     parser.add_argument(
         "--output-dir", "-o",
@@ -78,6 +85,14 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    # ── Update mode ───────────────────────────────────────────────────────────
+    if args.update:
+        run_update(APP_VERSION)
+        sys.exit(0)
+
+    if not args.dump_path:
+        parser.error("dump_path is required (or use --update to check for updates)")
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.WARNING,
