@@ -3738,23 +3738,32 @@ def _stats_section(
             f'</div>'
         )
 
-    cat_counts:   dict[str, int] = {}
-    proc_counts:  dict[str, int] = {}
-    month_counts: dict[str, int] = {}
+    cat_counts:  dict[str, int] = {}
+    proc_counts: dict[str, int] = {}
+    day_counts:  dict[str, int] = {}
+    mon_counts:  dict[str, int] = {}
     for e in mr_events:
         if e.behavior_category:
             cat_counts[e.behavior_category] = cat_counts.get(e.behavior_category, 0) + 1
         proc_counts[e.process_name] = proc_counts.get(e.process_name, 0) + 1
-        month_counts[e.timestamp.strftime("%Y-%m")] = month_counts.get(e.timestamp.strftime("%Y-%m"), 0) + 1
+        day_key = e.timestamp.strftime("%Y-%m-%d")
+        mon_key = e.timestamp.strftime("%Y-%m")
+        day_counts[day_key] = day_counts.get(day_key, 0) + 1
+        mon_counts[mon_key] = mon_counts.get(mon_key, 0) + 1
 
     top_cats  = dict(sorted(cat_counts.items(),  key=lambda x: -x[1])[:15])
     top_procs = dict(sorted(proc_counts.items(), key=lambda x: -x[1])[:10])
+
+    # Adaptive granularity: daily when span ≤ 60 days, monthly beyond that
+    use_daily   = len(day_counts) <= 60
+    time_counts = dict(sorted(day_counts.items())) if use_daily else dict(sorted(mon_counts.items()))
+    time_label  = "by day" if use_daily else "by month"
 
     charts = (
         f'<div class="stats-grid" style="margin-top:20px">'
         f'{_bar_chart(top_cats,  "Top 15 — Behavioral Categories", "Frequency of behavioral categories in match_reports. Most frequent categories indicate dominant TTPs.")}'
         f'{_bar_chart(top_procs, "Top 10 — Processes by Events",   "Processes generating the most behavioral events. High frequency may indicate persistent or malicious activity.")}'
-        f'{_bar_chart(dict(sorted(month_counts.items())), "Temporal Distribution (by month)", "Event distribution over time. Unusual spikes may signal a compromise or incident.")}'
+        f'{_bar_chart(time_counts, f"Temporal Distribution ({time_label})", "Event distribution over time. Unusual spikes may signal a compromise or incident.")}'
         f'</div>'
     )
     # ── MITRE ATT&CK category breakdown ──────────────────────────────────────
@@ -3872,14 +3881,18 @@ def _stats_section(
 
     # ── SVG area chart (rendered in Python — avoids JS getElementById collision) ──
     area_chart_html = ""
-    svg_content = _render_area_chart_svg(month_counts, uid=period_uid)
+    svg_content = _render_area_chart_svg(time_counts, uid=period_uid)
     if svg_content:
+        chart_title = f"Event Timeline — Distribution ({time_label})"
+        chart_desc  = (
+            f"Behavioral events from match_reports, grouped {time_label}. "
+            "Spikes indicate a campaign or incident window. "
+            "Gaps indicate agent inactivity or periods without detections."
+        )
         area_chart_html = (
             f'<div class="card" style="margin-bottom:20px"><div class="card-body">'
-            f'<div class="stat-card-title">Event Timeline — Monthly Distribution</div>'
-            f'<p style="font-size:11px;color:var(--text3);margin:2px 0 8px">'
-            f'Behavioral events extracted from match_reports, grouped by calendar month. '
-            f'Spikes may indicate a campaign or incident window.</p>'
+            f'<div class="stat-card-title">{_esc(chart_title)}</div>'
+            f'<p style="font-size:11px;color:var(--text3);margin:2px 0 8px">{_esc(chart_desc)}</p>'
             f'<div class="area-chart-outer">'
             f'<svg class="area-chart-svg" viewBox="0 0 700 160" preserveAspectRatio="xMinYMin meet">'
             f'{svg_content}'

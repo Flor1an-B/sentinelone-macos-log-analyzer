@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2] — 2026-03-23
+
+### Fixed
+- **Statistics — Event Timeline chart not updating on period change** — chart used monthly buckets (`%Y-%m`) regardless of period; when all dumps fall in the same calendar month, all periods produced an identical single-bar chart. Chart now uses **daily granularity** when the data spans ≤ 60 distinct days (adapts to monthly beyond that). Switching between 24h / 7 days / 30 days / All now shows visibly different distributions
+
+---
+
 ## [1.2.1] — 2026-03-23
 
 ### Fixed
