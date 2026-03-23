@@ -101,7 +101,7 @@ def run_update(current_version: str) -> None:
         try:
             import macloganalyzer as _pkg
             pkg_dir     = Path(_pkg.__file__).parent
-            remote_tree = _fetch_remote_tree()
+            remote_tree = _fetch_remote_tree(latest)
             local_tree  = _build_local_tree(pkg_dir)
             changes     = _diff_trees(local_tree, remote_tree)
         except Exception as exc:
@@ -153,7 +153,7 @@ def run_update(current_version: str) -> None:
             short = change.path[len(_PKG_PREFIX):]          # strip "macloganalyzer/"
             progress.update(task, description=f"[cyan]{change.path}[/cyan]")
             try:
-                content = _download_file(change.path)
+                content = _download_file(change.path, latest)
 
                 # Verify integrity: downloaded content must match GitHub tree SHA
                 if _git_blob_sha(content) != change.remote_sha:
@@ -309,9 +309,9 @@ def _fetch_latest_version() -> str:
     return tag
 
 
-def _fetch_remote_tree() -> dict[str, str]:
-    """Return {repo_path: git_blob_sha1} for all updatable remote files."""
-    url = f"{_API_BASE}/git/trees/main?recursive=1"
+def _fetch_remote_tree(tag: str) -> dict[str, str]:
+    """Return {repo_path: git_blob_sha1} for all updatable remote files at *tag*."""
+    url = f"{_API_BASE}/git/trees/v{tag}?recursive=1"
     req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json"})
     with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
         data = json.loads(resp.read())
@@ -359,9 +359,9 @@ def _diff_trees(
     return changes
 
 
-def _download_file(repo_path: str) -> bytes:
-    """Download a single file from the main branch on GitHub."""
-    url = f"{_RAW_BASE}/{repo_path}"
+def _download_file(repo_path: str, tag: str) -> bytes:
+    """Download a single file from the tagged release commit on GitHub."""
+    url = f"https://raw.githubusercontent.com/{_REPO}/v{tag}/{repo_path}"
     req = urllib.request.Request(url)
     with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
         return resp.read()

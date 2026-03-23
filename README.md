@@ -2,7 +2,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.2.0-informational)]()
+[![Version](https://img.shields.io/badge/version-1.2.2-informational)]()
 [![Platform](https://img.shields.io/badge/runs%20on-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?logo=python&logoColor=white)]()
 [![Analyzes](https://img.shields.io/badge/analyzes-macOS%20SentinelOne%20dumps-blue?logo=apple)]()
 
