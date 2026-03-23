@@ -106,10 +106,14 @@ macloganalyzer <dump_path> [options]
 | `--process NAME` | — | Filter on process name (partial match, case-insensitive) |
 | `-v, --verbose` | — | Enable detailed parsing logs |
 | `--version` | — | Show version and exit |
+| `--update` | — | Check for updates and download changed files from GitHub |
 
 ### Examples
 
 ```bash
+# Check for updates (downloads only changed files)
+macloganalyzer --update
+
 # HTML report only, HIGH severity and above
 macloganalyzer ./dump --format html --severity HIGH
 
