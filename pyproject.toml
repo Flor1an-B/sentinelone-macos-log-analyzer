@@ -4,7 +4,7 @@ build-backend = "setuptools.backends.legacy:build"
 
 [project]
 name = "sentinelone-macos-log-analyzer"
-version = "1.2.2"
+version = "1.2.3"
 description = "Forensic analysis tool for SentinelOne log dumps on macOS"
 authors = [{ name = "Florian Bertaux" }]
 requires-python = ">=3.11"

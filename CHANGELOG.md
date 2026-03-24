@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3] — 2026-03-24
+
+### Fixed
+- **Architecture detection — `x86_64` always reported as `Unknown`** — dump directories contain an empty file named `x86_64` (or `arm64`) to signal the machine architecture, but only `arm64` and `arm64e` were handled; `x86_64` had no matching branch and fell through silently. Added the missing case so Intel machines are now correctly identified.
+
+---
+
 ## [1.2.2] — 2026-03-23
 
 ### Fixed

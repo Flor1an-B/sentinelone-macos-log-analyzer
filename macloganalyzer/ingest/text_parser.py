@@ -62,6 +62,8 @@ def parse_text_files(dump_path: Path, ctx: SystemContext) -> None:
                 ctx.arch = "arm64"
             elif name == "arm64e":
                 ctx.arch = "arm64e"
+            elif name == "x86_64":
+                ctx.arch = "x86_64"
             elif re.match(r"MacBook|iMac|Mac(Pro|Mini|Studio)", name):
                 ctx.model = name
             elif name == "ioreg.txt":
