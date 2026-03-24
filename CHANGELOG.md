@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.5] — 2026-03-24
+
+### Fixed
+- **Version banner always shows correct version after update** — `APP_VERSION` was hardcoded in five files; when a release was tagged without updating those constants the updater downloaded the new files but the app kept displaying the old version, re-triggering the update loop on every launch ("No file changes detected — already in sync"). Version is now read from `macloganalyzer/_version.py`, a plain Python file downloaded by the updater like any other source file — no dependency on pip dist-info metadata.
+
+---
+
+## [1.2.4] — 2026-03-24
+
+### Fixed
+- *(superseded by 1.2.5)* Attempted to use `importlib.metadata` as a single source of truth for the version, but the updater only replaces `.py` files and never touches pip dist-info — causing `APP_VERSION = "unknown"` after an in-place update.
+
+---
+
 ## [1.2.3] — 2026-03-24
 
 ### Fixed
