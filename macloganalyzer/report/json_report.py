@@ -6,6 +6,7 @@ from pathlib import Path
 from macloganalyzer.models.context import SystemContext
 from macloganalyzer.models.finding import Finding
 from macloganalyzer.models.event import Event
+from macloganalyzer.report.console import APP_VERSION
 
 
 class _Encoder(json.JSONEncoder):
@@ -67,7 +68,7 @@ def generate_json(
     payload = {
         "meta": {
             "tool": "sentinelone-macos-log-analyzer",
-            "version": "1.2.2",
+            "version": APP_VERSION,
             "dump_path": ctx.dump_path,
             "dump_date": ctx.parse_stats.get("dump_date"),
             "analysis_date": datetime.utcnow().isoformat() + "Z",

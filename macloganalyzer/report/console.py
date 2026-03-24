@@ -3,6 +3,7 @@ import io
 import sys
 import time
 from datetime import datetime, timezone
+from importlib.metadata import version as _pkg_version, PackageNotFoundError as _PNF
 
 from rich.columns import Columns
 from rich.console import Console
@@ -26,7 +27,10 @@ if sys.platform == "win32":
 
 # ── Application identity ───────────────────────────────────────────────────────
 APP_NAME    = "SentinelOne macOS Log Analyzer"
-APP_VERSION = "1.2.2"
+try:
+    APP_VERSION = _pkg_version("sentinelone-macos-log-analyzer")
+except _PNF:
+    APP_VERSION = "unknown"
 APP_AUTHOR  = "Florian Bertaux"
 
 console = Console(highlight=False)
